@@ -54,6 +54,7 @@ from metaworld.envs.mujoco.sawyer_xyz.v2 import (
     SawyerSweepIntoGoalEnvV2,
     SawyerWindowCloseEnvV2,
     SawyerWindowOpenEnvV2,
+    SawyerDrawerLongEnvV2,
 )
 
 ALL_V2_ENVIRONMENTS = OrderedDict(
@@ -114,6 +115,11 @@ ALL_V2_ENVIRONMENTS = OrderedDict(
     )
 )
 
+LONG_HORIZON_ENVIRONMENTS = OrderedDict(
+    (
+        ("drawer-long-v2", SawyerDrawerLongEnvV2),
+    )
+)
 
 _NUM_METAWORLD_ENVS = len(ALL_V2_ENVIRONMENTS)
 # V2 DICTS
@@ -364,9 +370,9 @@ ML45_ARGS_KWARGS = dict(
 )
 
 
-def create_hidden_goal_envs():
+def create_hidden_goal_envs(envs=ALL_V2_ENVIRONMENTS):
     hidden_goal_envs = {}
-    for env_name, env_cls in ALL_V2_ENVIRONMENTS.items():
+    for env_name, env_cls in envs.items():
         d = {}
 
         def initialize(env, seed=None):
@@ -396,9 +402,9 @@ def create_hidden_goal_envs():
     return OrderedDict(hidden_goal_envs)
 
 
-def create_observable_goal_envs():
+def create_observable_goal_envs(envs=ALL_V2_ENVIRONMENTS):
     observable_goal_envs = {}
-    for env_name, env_cls in ALL_V2_ENVIRONMENTS.items():
+    for env_name, env_cls in envs.items():
         d = {}
 
         def initialize(env, seed=None, render_mode=None):
@@ -433,3 +439,6 @@ def create_observable_goal_envs():
 
 ALL_V2_ENVIRONMENTS_GOAL_HIDDEN = create_hidden_goal_envs()
 ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE = create_observable_goal_envs()
+
+LONG_HORIZON_ENVIRONMENTS_GOAL_OBSERVABLE = create_observable_goal_envs(envs=LONG_HORIZON_ENVIRONMENTS)
+LONG_HORIZON_ENVIRONMENTS_GOAL_HIDDEN = create_hidden_goal_envs(envs=LONG_HORIZON_ENVIRONMENTS)

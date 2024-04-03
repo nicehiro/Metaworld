@@ -248,6 +248,11 @@ from metaworld.envs.mujoco.sawyer_xyz.v2.sawyer_window_open_v2 import (
     TestWindowOpenv2,
     TrainWindowOpenv2,
 )
+from metaworld.envs.mujoco.sawyer_xyz.v2.sawyer_drawer_long_env_v2 import (
+    SawyerDrawerLongEnvV2,
+    TestDrawerLongv2,
+    TrainDrawerLongv2,
+)
 
 __all__ = [
     "SawyerNutAssemblyEnvV2",
@@ -300,4 +305,5 @@ __all__ = [
     "SawyerSweepIntoGoalEnvV2",
     "SawyerWindowCloseEnvV2",
     "SawyerWindowOpenEnvV2",
+    "SawyerDrawerLongEnvV2",
 ]
