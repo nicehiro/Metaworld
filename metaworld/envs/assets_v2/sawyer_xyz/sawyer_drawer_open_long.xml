@@ -3,7 +3,6 @@
     <include file="../objects/assets/drawer_dependencies.xml"/>
     <include file="../objects/assets/xyz_base_dependencies.xml"/>
     <include file="../objects/assets/block_dependencies.xml"/>
-
     <worldbody>
         <include file="../objects/assets/xyz_base.xml"/>
 
@@ -11,14 +10,15 @@
             <include file="../objects/assets/drawer.xml"/>
         </body>
 
-        <body name="my_block" pos="0.201 0.6 0.03">
+        <body name="my_block" pos="0.01 0.65 0.05">
             <joint type="free"/>
-            <inertial pos="0 0 0" mass="1" diaginertia="0.0025 0.0025 0.0025"/>
-            <geom material="block_wood" type="box" size="0.02 0.02 0.02"/>
+            <inertial pos="0 0 0" mass="0.4" diaginertia="0.0025 0.0025 0.0025"/>
+            <geom material="block_wood" type="box" size="0.03 0.03 0.05"/>
         </body>
 
         <site name="goal" pos="0. 0.74 0.05" size="0.02"
               rgba="0 0.8 0 1"/>
+
     </worldbody>
 
     <actuator>

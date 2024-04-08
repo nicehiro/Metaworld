@@ -386,7 +386,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         obj_pos = self._get_pos_objects()
         assert len(obj_pos) % 3 == 0
         obj_pos_split = np.split(obj_pos, len(obj_pos) // 3)
-
+    
         obj_quat = self._get_quat_objects()
         assert len(obj_quat) % 4 == 0
         obj_quat_split = np.split(obj_quat, len(obj_quat) // 4)
