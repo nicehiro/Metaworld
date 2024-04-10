@@ -9,8 +9,11 @@ from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
     _assert_task_is_set,
 )
 
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_goal_env import SawyerGoalEnv
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_visual_env import SawyerVisualEnv
 
-class SawyerDrawerLongEnvV2(SawyerXYZEnv):
+
+class SawyerDrawerLongEnvV2(SawyerGoalEnv):
     def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
@@ -63,25 +66,6 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
     def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_drawer_long.xml")
 
-    @_assert_task_is_set
-    def evaluate_state(self, obs, action):
-        (
-            reward,
-            handler_target_to_obj,
-            block_target_to_obj,
-            handler_reach,
-            block_in_place,
-        ) = self.compute_reward(action, obs)
-
-        info = {
-            "success": float(reward),
-            "handle_target_distance": float(handler_target_to_obj),
-            "block_target_distance": float(block_target_to_obj),
-            "handle_success": float(handler_reach),
-            "block_success": float(block_in_place),
-        }
-
-        return reward, info
 
     def _get_id_main_object(self):
         return self.unwrapped.model.geom_name2id("objGeom")
@@ -97,6 +81,11 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         drawer_quat = self.data.body("drawer_link").xquat
         block_quat = self.data.body("my_block").xquat
         return np.concatenate([drawer_quat, block_quat])
+
+    def _get_pos_achieve_goal(self, obs):
+        handle_pos = obs[4:7]
+        block_pos = obs[11:14]
+        return np.concatenate([handle_pos, block_pos])
 
     def reset_model(self):
         self._reset_hand()
@@ -125,83 +114,24 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         self.grasp_count = 10
 
         return self._get_obs()
-
-    def compute_reward(self, action, obs):
-        return self._compute_sparse_reward(action, obs)
-
-    def _compute_sparse_reward(self, action, obs):
-        handler_obj = obs[4:7]
-        block_obj = obs[11:14]
-
-        handler_target = self._target_pos[:3]
-        block_target = self._target_pos[3:]
-
-        # check if the drawer is close
-        handler_target_to_obj = np.linalg.norm(handler_obj - handler_target)
-        handler_reach = handler_target_to_obj < 0.02
-
-        # check if the block is inside the drawer
-        block_target_to_obj = np.linalg.norm(block_obj - block_target)
-        block_in_place = block_target_to_obj < 0.04
-        
-        reward = 1 if handler_reach and block_in_place else 0
-
-        return (reward, handler_target_to_obj, block_target_to_obj, handler_reach, block_in_place)
-
-    def _compute_dense_reward(self, action, obs):
-        gripper = obs[:3]
-        handle = obs[4:7]
-
-        handle_error = np.linalg.norm(handle - self._target_pos)
-
-        reward_for_opening = reward_utils.tolerance(
-            handle_error, bounds=(0, 0.02), margin=self.maxDist, sigmoid="long_tail"
-        )
-
-        handle_pos_init = self._target_pos + np.array([0.0, self.maxDist, 0.0])
-        # Emphasize XY error so that gripper is able to drop down and cage
-        # handle without running into it. By doing this, we are assuming
-        # that the reward in the Z direction is small enough that the agent
-        # will be willing to explore raising a finger above the handle, hook it,
-        # and drop back down to re-gain Z reward
-        scale = np.array([3.0, 3.0, 1.0])
-        gripper_error = (handle - gripper) * scale
-        gripper_error_init = (handle_pos_init - self.init_tcp) * scale
-
-        reward_for_caging = reward_utils.tolerance(
-            np.linalg.norm(gripper_error),
-            bounds=(0, 0.01),
-            margin=np.linalg.norm(gripper_error_init),
-            sigmoid="long_tail",
-        )
-
-        reward = reward_for_caging + reward_for_opening
-        reward *= 5.0
-
-        return (
-            reward,
-            np.linalg.norm(handle - gripper),
-            obs[3],
-            handle_error,
-            reward_for_caging,
-            reward_for_opening,
-        )
     
     def get_demo_action_(self, act, obs):
         # return the demonstration action for the current observation
         # (used for imitation learning)
-        handle_pos = obs[4:7]
-        block_pos = obs[11:14]
-        gripper_pos = obs[:3] + np.array([0, 0, -0.025])
+        state_observation = obs["observation"]
+
+        handle_pos = state_observation[4:7]
+        block_pos = state_observation[11:14]
+        gripper_pos = state_observation[:3] + np.array([0, 0, -0.025])
 
         handle_open_target = self._target_pos[:3] + np.array([0, -0.2, 0])
         handle_close_target = self._target_pos[:3]
         drawer_center = self.get_body_com("drawer_link")
 
-        print(f"gripper_pos: {gripper_pos}")
-        print(f"block_pos: {block_pos}")
-        print(f"block_target_pos: {drawer_center}")
-        print(f"drawer_center: {drawer_center}")
+        # print(f"gripper_pos: {gripper_pos}")
+        # print(f"block_pos: {block_pos}")
+        # print(f"block_target_pos: {drawer_center}")
+        # print(f"drawer_center: {drawer_center}")
 
         block_success = np.linalg.norm(drawer_center - block_pos) < 0.04
         handle_open_succes = np.linalg.norm(handle_pos - handle_open_target) < 0.04
@@ -214,7 +144,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         
         # check if the gripper is near the handler
         if np.linalg.norm(gripper_pos - handle_pos) < 0.02 and block_success:
-            print(6)
+            # print(6)
             # close the gripper
             grip_action = 0
             # close the drawer
@@ -225,7 +155,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         handler_pos_xy = handle_pos[:2]
         gripper_pos_xy = gripper_pos[:2]
         if np.linalg.norm(handler_pos_xy - gripper_pos_xy) < 0.02 and block_success:
-            print(5)
+            # print(5)
             # open the gripper
             grip_action = 0
             # move the gripper to the handler
@@ -235,7 +165,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         # check if the block is in the drawer and the gripper is top of the block
         handle_top_pos = handle_pos + np.array([0, 0, 0.11])
         if block_success and np.linalg.norm(gripper_pos[2] - block_pos[2]) > 0.12:
-            print(4)
+            # print(4)
             # open the gripper
             grip_action = 0
             # move the gripper
@@ -245,7 +175,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         # check if the block is in the drawer and the gripper is near the block
         block_target_top_pos = drawer_center + np.array([0, 0, 0.12])
         if block_success and np.linalg.norm(gripper_pos[:2] - block_pos[:2]) < 0.02:
-            print(3)
+            # print(3)
             if self.grasp_count > 0:
                 self.grasp_count -= 1
                 # open the gripper
@@ -263,7 +193,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
             
         # check if the gripper is near the block and gripper is top of the block target
         if np.linalg.norm(gripper_pos - block_pos) < 0.02 and np.linalg.norm(gripper_pos[:2] - block_target_top_pos[:2]) < 0.02:
-            print(2)
+            # print(2)
             # close the gripper
             grip_action = 1
             # move the block to the target
@@ -273,9 +203,9 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         # check if the gripper is near the block and gripper is on the top of the block
         block_top_pos = block_pos.copy()
         block_top_pos[2] = 0.18
-        print(f"block_top_pos: {block_top_pos}")
+        # print(f"block_top_pos: {block_top_pos}")
         if np.linalg.norm(gripper_pos - block_pos) < 0.02 and np.linalg.norm(gripper_pos - block_top_pos) < 0.02:
-            print(1)
+            # print(1)
             # close the gripper
             grip_action = 1
             # move the block to the top of the target
@@ -284,7 +214,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
 
         # check if the gripper is near the block
         if np.linalg.norm(gripper_pos - block_pos) < 0.02:
-            print(0)
+            # print(0)
             if self.grasp_count > 0:
                 self.grasp_count -= 1
                 # close the gripper
@@ -302,7 +232,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         
         # check if the gripper is on the top of the block
         if np.linalg.norm(gripper_pos[:2] - block_top_pos[:2]) < 0.02:
-            print(-1)
+            # print(-1)
             # open the gripper
             grip_action = 0
             # move the gripper to the block
@@ -312,7 +242,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         # check if drawer is open and gripper is on the top of the handle
         # handle_open_top_pos = handle_open_target + np.array([0, 0, 0.05])
         if handle_open_succes and np.linalg.norm(gripper_pos[2] - handle_pos[2]) > 0.04:
-            print(-2)
+            # print(-2)
             # open the gripper
             grip_action = 0
             # move the gripper to the block
@@ -324,7 +254,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         gripper_pos_xy = gripper_pos[:2]
         if handle_open_succes and np.linalg.norm(gripper_pos_xy - handler_pos_xy) < 0.02:
             # move the gripper to the top of handle
-            print(-3)
+            # print(-3)
             if self.grasp_count > 0:
                 self.grasp_count -= 1
                 grip_action = 0
@@ -338,7 +268,7 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
 
         # check if the gripper is near the handler
         if np.linalg.norm(gripper_pos - handle_pos) < 0.02:
-            print(-4)
+            # print(-4)
             # close the gripper
             grip_action = 1
             # open the drawer
@@ -348,75 +278,19 @@ class SawyerDrawerLongEnvV2(SawyerXYZEnv):
         # check if the gripper is on the top of the handler
         handler_top_pos = handle_pos + np.array([0, 0, 0.1])
         if np.linalg.norm(handler_pos_xy - gripper_pos_xy) < 0.02:
-            print(-5)
+            # print(-5)
             # open the gripper
             grip_action = 0
             # move the gripper to the handler
             drawer_action = (handle_pos - gripper_pos) * 20
             return np.concatenate([drawer_action, [grip_action]])
         else:
-            print(-6)
+            # print(-6)
             # block moved
             # move to the top of drawer handle
             grip_action = 0
             drawer_action = (handler_top_pos - gripper_pos) * 5
             return np.concatenate([drawer_action, [grip_action]])
-
-    @_assert_task_is_set
-    def step(self, action):
-        assert len(action) == 4, f"Actions should be size 4, got {len(action)}"
-        self.set_xyz_action(action[:3])
-        if self.curr_path_length >= self.max_path_length:
-            raise ValueError("You must reset the env manually once truncate==True")
-        self.do_simulation([action[-1], -action[-1]], n_frames=self.frame_skip)
-        self.curr_path_length += 1
-
-        # Running the simulator can sometimes mess up site positions, so
-        # re-position them here to make sure they're accurate
-        for site in self._target_site_config:
-            self._set_pos_site(*site)
-
-        if self._did_see_sim_exception:
-            return (
-                self._last_stable_obs,  # observation just before going unstable
-                0.0,  # reward (penalize for causing instability)
-                False,
-                False,  # termination flag always False
-                {  # info
-                    "success": False,
-                    "near_object": 0.0,
-                    "grasp_success": False,
-                    "grasp_reward": 0.0,
-                    "in_place_reward": 0.0,
-                    "obj_to_target": 0.0,
-                    "unscaled_reward": 0.0,
-                },
-            )
-
-        self._last_stable_obs = self._get_obs()
-
-        self._last_stable_obs = np.clip(
-            self._last_stable_obs,
-            a_max=self.sawyer_observation_space.high,
-            a_min=self.sawyer_observation_space.low,
-            dtype=np.float64,
-        )
-        reward, info = self.evaluate_state(self._last_stable_obs, action)
-        # step will never return a terminate==True if there is a success
-        terminal = False
-        if info["handle_success"] and info["block_success"]:
-            terminal = True
-        # but we can return truncate=True if the current path length == max path length
-        truncate = False
-        if self.curr_path_length == self.max_path_length:
-            truncate = True
-        return (
-            np.array(self._last_stable_obs, dtype=np.float64),
-            reward,
-            False,
-            truncate,
-            info,
-        )
 
 
 class TrainDrawerLongv2(SawyerDrawerLongEnvV2):
