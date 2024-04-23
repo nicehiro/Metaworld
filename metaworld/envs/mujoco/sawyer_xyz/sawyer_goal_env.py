@@ -1,3 +1,4 @@
+import mujoco
 import numpy as np
 from gymnasium.spaces import Dict, Box
 from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import SawyerXYZEnv, _assert_task_is_set
@@ -7,7 +8,14 @@ from gymnasium.utils import RecordConstructorArgs, seeding
 class SawyerGoalEnv(SawyerXYZEnv):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args,
+            **kwargs,
+        )
+        self._freeze_rand_vec = False
+        self._random_reset_drawer_space = None
+        self._random_reset_block_space = None
+        self._subgoal = None
 
     def _get_obs(self):
         return self._get_obs_dict()
@@ -35,6 +43,24 @@ class SawyerGoalEnv(SawyerXYZEnv):
             desired_goal=self._get_pos_goal(),
             achieved_goal=self._get_pos_achieve_goal(obs), # drawer handle and block
         )
+
+    def _get_state_rand_vec(self):
+        if self._freeze_rand_vec:
+            assert self._last_rand_vec is not None
+            return self._last_rand_vec
+        else:
+            drawer_rand_vec = np.random.uniform(
+                self._random_reset_drawer_space.low,
+                self._random_reset_drawer_space.high,
+                size=self._random_reset_drawer_space.low.size,
+            ).astype(np.float64)
+            block_rand_vec = np.random.uniform(
+                self._random_reset_block_space.low,
+                self._random_reset_block_space.high,
+                size=self._random_reset_block_space.low.size,
+            )
+            # self._last_rand_vec = None
+            return (drawer_rand_vec, block_rand_vec)
 
     @property
     def sawyer_observation_space(self):
@@ -94,6 +120,8 @@ class SawyerGoalEnv(SawyerXYZEnv):
         if seed is not None:
             self._np_random, seed = seeding.np_random(seed)
 
+        self._sugboal = None
+
         self._reset_simulation()
 
         obs = self.reset_model()
@@ -135,6 +163,12 @@ class SawyerGoalEnv(SawyerXYZEnv):
         # re-position them here to make sure they're accurate
         for site in self._target_site_config:
             self._set_pos_site(*site)
+
+        if self._subgoal is not None:
+            self._set_pos_site("subgoal_handle", self._subgoal[:3])
+            self._set_pos_site("subgoal_block", self._subgoal[3:])
+
+        self.update_subgoal(np.array([0.3, 0.5, 0.1, 0.3, 0.5, 0.2]))
 
         if self._did_see_sim_exception:
             return (
@@ -181,3 +215,6 @@ class SawyerGoalEnv(SawyerXYZEnv):
             truncate,
             info,
         )
+
+    def update_subgoal(self, subgoal):
+        self._subgoal = subgoal.copy()

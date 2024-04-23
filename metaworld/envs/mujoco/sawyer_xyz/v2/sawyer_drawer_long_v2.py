@@ -17,8 +17,8 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
     def __init__(self, tasks=None, render_mode=None):
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
-        obj_low = (-0.1, 0.9, 0.0)
-        obj_high = (0.1, 0.9, 0.0)
+        drawer_low = np.array((-0.1, 0.9, 0.0))
+        drawer_high = np.array((0.1, 0.9, 0.0))
 
         super().__init__(
             self.model_name,
@@ -53,10 +53,13 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
         goal_low = np.concatenate([hand_goal_low, block_goal_low])
         goal_high = np.concatenate([hand_goal_high, block_goal_high])
 
-        self._random_reset_space = Box(
-            np.array(obj_low),
-            np.array(obj_high),
-        )
+        self._random_reset_drawer_space = Box(drawer_low, drawer_high)
+
+        # set block random positio in front of drawer
+        block_low = drawer_low.copy() + np.array([0.2, 0.15, 0.0])
+        block_high = drawer_high.copy() + np.array([0.3, 0.2, 0.0])
+        self._random_reset_block_space = Box(block_low, block_high)
+
         self.goal_space = Box(np.array(goal_low), np.array(goal_high))
 
         self.maxDist = 0.2
@@ -65,7 +68,6 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
     @property
     def model_name(self):
         return full_v2_path_for("sawyer_xyz/sawyer_drawer_long.xml")
-
 
     def _get_id_main_object(self):
         return self.unwrapped.model.geom_name2id("objGeom")
@@ -88,15 +90,19 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
         return np.concatenate([handle_pos, block_pos])
 
     def reset_model(self):
+        self._freeze_rand_vec = False
         self._reset_hand()
         self.prev_obs = self._get_curr_obs_combined_no_goal()
 
         # Compute nightstand position
-        self.obj_init_pos = self._get_state_rand_vec()
+        self.obj_init_pos, self.block_init_pos = self._get_state_rand_vec()
         # Set mujoco body to computed position
         self.model.body_pos[
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "drawer")
         ] = self.obj_init_pos
+        self.model.body_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
+        ] = self.block_init_pos
 
         # Set _target_pos to current drawer position (closed) minus an offset
         # self._target_pos = self.obj_init_pos + np.array(
@@ -115,7 +121,7 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
 
         return self._get_obs()
     
-    def get_demo_action_(self, act, obs):
+    def get_demo_action_(self, obs):
         # return the demonstration action for the current observation
         # (used for imitation learning)
         state_observation = obs["observation"]
@@ -126,6 +132,7 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
 
         handle_open_target = self._target_pos[:3] + np.array([0, -0.2, 0])
         handle_close_target = self._target_pos[:3]
+        # block target is drawer center
         drawer_center = self.get_body_com("drawer_link")
 
         # print(f"gripper_pos: {gripper_pos}")
@@ -202,7 +209,7 @@ class SawyerDrawerLongEnvV2(SawyerGoalEnv):
 
         # check if the gripper is near the block and gripper is on the top of the block
         block_top_pos = block_pos.copy()
-        block_top_pos[2] = 0.18
+        block_top_pos[2] = 0.19
         # print(f"block_top_pos: {block_top_pos}")
         if np.linalg.norm(gripper_pos - block_pos) < 0.02 and np.linalg.norm(gripper_pos - block_top_pos) < 0.02:
             # print(1)

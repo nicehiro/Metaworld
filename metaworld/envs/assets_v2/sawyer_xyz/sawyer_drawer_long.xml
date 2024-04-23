@@ -18,7 +18,11 @@
         </body>
 
         <site name="goal" pos="0. 0.74 0.05" size="0.02"
-              rgba="0 0.8 0 1"/>
+              rgba="0 0.8 0 0"/>
+
+        <site name="subgoal_handle" pos="0 0.74 -0.05" size="0.015 0.015 0.015" rgba="0.8 0 0 0.5" type="box" /> 
+
+        <site name="subgoal_block" pos="0 0.74 -0.10" size="0.015 0.015 0.015" rgba="0 0 0.8 0.5" type="box" />
     </worldbody>
 
     <actuator>
