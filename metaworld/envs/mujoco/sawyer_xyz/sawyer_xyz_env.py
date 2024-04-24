@@ -31,7 +31,7 @@ class SawyerMocapBase(mjenv_gym):
         "distance": 0.8,
         "lookat": np.array([0.0, 0.7, 0.0]),
         "elevation": -45,
-        "azimuth": 30
+        "azimuth": 30,
     }
 
     def __init__(self, model_name, frame_skip=5, render_mode=None):
@@ -41,6 +41,8 @@ class SawyerMocapBase(mjenv_gym):
             frame_skip=frame_skip,
             observation_space=self.sawyer_observation_space,
             render_mode=render_mode,
+            height=84,
+            width=84,
             default_camera_config=self.default_camera_config,
         )
         self.reset_mocap_welds()

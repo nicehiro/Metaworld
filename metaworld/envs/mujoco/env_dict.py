@@ -59,6 +59,8 @@ from metaworld.envs.mujoco.sawyer_xyz.v2 import (
     SawyerDrawerCloseLongEnvV2,
 )
 
+from metaworld.envs.mujoco.sawyer_xyz.visual import SawyerDrawerOpenLongEnvV3
+
 ALL_V2_ENVIRONMENTS = OrderedDict(
     (
         ("assembly-v2", SawyerNutAssemblyEnvV2),
@@ -123,6 +125,10 @@ LONG_HORIZON_ENVIRONMENTS = OrderedDict(
         ("drawer-open-long-v2", SawyerDrawerOpenLongEnvV2),
         ("drawer-close-long-v2", SawyerDrawerCloseLongEnvV2),
     )
+)
+
+LONG_HORIZON_ENVIRONMENTS_VISUAL = OrderedDict(
+    (("drawer-open-long-v3", SawyerDrawerOpenLongEnvV3),)
 )
 
 _NUM_METAWORLD_ENVS = len(ALL_V2_ENVIRONMENTS)
@@ -444,5 +450,13 @@ def create_observable_goal_envs(envs=ALL_V2_ENVIRONMENTS):
 ALL_V2_ENVIRONMENTS_GOAL_HIDDEN = create_hidden_goal_envs()
 ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE = create_observable_goal_envs()
 
-LONG_HORIZON_ENVIRONMENTS_GOAL_OBSERVABLE = create_observable_goal_envs(envs=LONG_HORIZON_ENVIRONMENTS)
-LONG_HORIZON_ENVIRONMENTS_GOAL_HIDDEN = create_hidden_goal_envs(envs=LONG_HORIZON_ENVIRONMENTS)
+LONG_HORIZON_ENVIRONMENTS_GOAL_OBSERVABLE = create_observable_goal_envs(
+    envs=LONG_HORIZON_ENVIRONMENTS
+)
+LONG_HORIZON_ENVIRONMENTS_GOAL_HIDDEN = create_hidden_goal_envs(
+    envs=LONG_HORIZON_ENVIRONMENTS
+)
+
+LONG_HORIZON_ENVIRONMENTS_VISUAL_GOAL_OBSERVABLE = create_observable_goal_envs(
+    envs=LONG_HORIZON_ENVIRONMENTS_VISUAL
+)

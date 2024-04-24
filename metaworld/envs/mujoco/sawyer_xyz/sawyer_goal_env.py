@@ -58,7 +58,7 @@ class SawyerGoalEnv(SawyerXYZEnv):
                 self._random_reset_block_space.low,
                 self._random_reset_block_space.high,
                 size=self._random_reset_block_space.low.size,
-            )
+            ).astype(np.float64)
             # self._last_rand_vec = None
             return (drawer_rand_vec, block_rand_vec)
 
