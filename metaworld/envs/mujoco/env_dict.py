@@ -59,7 +59,10 @@ from metaworld.envs.mujoco.sawyer_xyz.v2 import (
     SawyerDrawerCloseLongEnvV2,
 )
 
-from metaworld.envs.mujoco.sawyer_xyz.visual import SawyerDrawerOpenLongEnvV3
+from metaworld.envs.mujoco.sawyer_xyz.visual import (
+    SawyerDrawerOpenLongEnvV3,
+    SawyerDrawerLongEnvV3,
+)
 
 ALL_V2_ENVIRONMENTS = OrderedDict(
     (
@@ -128,7 +131,10 @@ LONG_HORIZON_ENVIRONMENTS = OrderedDict(
 )
 
 LONG_HORIZON_ENVIRONMENTS_VISUAL = OrderedDict(
-    (("drawer-open-long-v3", SawyerDrawerOpenLongEnvV3),)
+    (
+        ("drawer-open-long-v3", SawyerDrawerOpenLongEnvV3),
+        ("drawer-long-v3", SawyerDrawerLongEnvV3),
+    )
 )
 
 _NUM_METAWORLD_ENVS = len(ALL_V2_ENVIRONMENTS)

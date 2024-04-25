@@ -12,7 +12,7 @@
         </body>
 
         <body name="my_block" pos="0.201 0.6 0.03">
-            <joint type="free"/>
+            <!-- <joint type="free"/> -->
             <inertial pos="0 0 0" mass="1" diaginertia="0.0025 0.0025 0.0025"/>
             <geom material="block_wood" type="box" size="0.02 0.02 0.02"/>
         </body>
