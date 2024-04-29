@@ -131,9 +131,9 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
         self.model.body_pos[
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "drawer")
         ] = self.obj_init_pos
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = self.block_init_pos
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = self.block_init_pos
+        self.set_env_state((qpos, qvel))
 
         # update
         mujoco.mj_forward(self.model, self.data)
@@ -145,18 +145,18 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
         self._target_pos = np.concatenate([drawer_target_pos, block_target_pos])
 
         # set mujoco body to target position
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = block_target_pos
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = block_target_pos
+        self.set_env_state((qpos, qvel))
 
         mujoco.mj_forward(self.model, self.data)
 
         image_desired_goal = self.render()
 
         # back to original position
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = self.block_init_pos
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = self.block_init_pos
+        self.set_env_state((qpos, qvel))
 
         # update
         mujoco.mj_forward(self.model, self.data)

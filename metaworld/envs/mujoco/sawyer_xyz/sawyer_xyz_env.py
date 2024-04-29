@@ -29,9 +29,9 @@ class SawyerMocapBase(mjenv_gym):
     default_camera_config = {
         "trackbodyid": -1,
         "distance": 0.8,
-        "lookat": np.array([0.0, 0.7, 0.0]),
-        "elevation": -45,
-        "azimuth": 30,
+        "lookat": np.array([0.0, 0.8, 0.0]),
+        "elevation": -35,
+        "azimuth": 50,
     }
 
     def __init__(self, model_name, frame_skip=5, render_mode=None):
@@ -41,8 +41,8 @@ class SawyerMocapBase(mjenv_gym):
             frame_skip=frame_skip,
             observation_space=self.sawyer_observation_space,
             render_mode=render_mode,
-            height=84,
-            width=84,
+            height=48,
+            width=48,
             default_camera_config=self.default_camera_config,
         )
         self.reset_mocap_welds()

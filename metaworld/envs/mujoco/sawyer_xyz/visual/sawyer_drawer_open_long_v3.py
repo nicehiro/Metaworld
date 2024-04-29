@@ -132,10 +132,11 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
         self.model.body_pos[
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "drawer")
         ] = self.obj_init_pos
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = self.block_init_pos
-        
+
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = self.block_init_pos
+        self.set_env_state((qpos, qvel))
+
         # update
         mujoco.mj_forward(self.model, self.data)
 
@@ -156,9 +157,9 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
 
         # Set mujoco body to computed position
         self.data.qpos[9] = -0.15
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = block_target_pos
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = block_target_pos
+        self.set_env_state((qpos, qvel))
 
         # update
         mujoco.mj_forward(self.model, self.data)
@@ -168,14 +169,19 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
 
         # back to the original position
         self.data.qpos[9] = 0
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = self.block_init_pos
+        qpos, qvel = self.get_env_state()
+        qpos[10:13] = self.block_init_pos
+        self.set_env_state((qpos, qvel))
 
         # update
         mujoco.mj_forward(self.model, self.data)
 
         return image_desired_goal
+
+    def new_method(self):
+        self.model.body_pos[
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
+        ] = self.block_init_pos
 
     def get_demo_action_(self, obs):
         # return the demonstration action for the current observation
