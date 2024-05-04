@@ -76,7 +76,7 @@ class SawyerVisualEnv(SawyerGoalEnv):
             dtype=np.float64,
         )
         self.goal_space = Box(np.array(goal_low), np.array(goal_high))
-        self.image_goal_space = Box(low=0, high=255, shape=(84, 84, 3), dtype=np.uint8)
+        self.image_goal_space = Box(low=0, high=255, shape=(48, 48, 3), dtype=np.uint8)
         return Dict(
             {
                 "observation": self.observation_space,

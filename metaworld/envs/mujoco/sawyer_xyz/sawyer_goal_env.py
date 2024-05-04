@@ -168,8 +168,6 @@ class SawyerGoalEnv(SawyerXYZEnv):
             self._set_pos_site("subgoal_handle", self._subgoal[:3])
             self._set_pos_site("subgoal_block", self._subgoal[3:])
 
-        self.update_subgoal(np.array([0.3, 0.5, 0.1, 0.3, 0.5, 0.2]))
-
         if self._did_see_sim_exception:
             return (
                 self._last_stable_obs,  # observation just before going unstable

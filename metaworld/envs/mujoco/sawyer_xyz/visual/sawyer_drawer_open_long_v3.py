@@ -178,11 +178,6 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
 
         return image_desired_goal
 
-    def new_method(self):
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "my_block")
-        ] = self.block_init_pos
-
     def get_demo_action_(self, obs):
         # return the demonstration action for the current observation
         # (used for imitation learning)

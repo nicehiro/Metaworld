@@ -101,8 +101,8 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
             # set _random_reset_block_space here
             # since the block position is dependent on the drawer position
             self._random_reset_block_space = Box(
-                low=drawer_rand_vec + np.array([0.15, -0.25, 0.05]),
-                high=drawer_rand_vec + np.array([0.2, -0.2, 0.05]),
+                low=drawer_rand_vec + np.array([0.2, -0.3, 0.05]),
+                high=drawer_rand_vec + np.array([0.25, -0.27, 0.05]),
             )
             block_rand_vec = np.random.uniform(
                 self._random_reset_block_space.low,
@@ -237,7 +237,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
                 # open the gripper
                 grip_action = 0
                 # release
-                drawer_action = (block_target_top_pos - drawer_center) * 20
+                drawer_action = (block_target_top_pos - drawer_center) * 40
                 return np.concatenate([drawer_action, [grip_action]])
 
         # check if the gripper is near the block and gripper is top of the block target
@@ -249,7 +249,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
             # close the gripper
             grip_action = 1
             # move the block to the target
-            drawer_action = (drawer_center - block_pos) * 20
+            drawer_action = (drawer_center - block_pos) * 40
             return np.concatenate([drawer_action, [grip_action]])
 
         # check if the gripper is near the block and gripper is on the top of the block
@@ -282,7 +282,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
                 # close the gripper
                 grip_action = 1
                 # lift the block
-                drawer_action = (block_top_pos - gripper_pos) * 30
+                drawer_action = (block_top_pos - gripper_pos) * 100
                 return np.concatenate([drawer_action, [grip_action]])
 
         # check if the gripper is on the top of the block
@@ -291,7 +291,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
             # open the gripper
             grip_action = 0
             # move the gripper to the block
-            drawer_action = (block_pos - gripper_pos) * 30
+            drawer_action = (block_pos - gripper_pos) * 40
             return np.concatenate([drawer_action, [grip_action]])
 
         # check if drawer is open and gripper is on the top of the handle
@@ -321,7 +321,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
             else:
                 self.grasp_count = 10
                 grip_action = 0
-                drawer_action = (handle_top_pos - gripper_pos) * 10
+                drawer_action = (handle_top_pos - gripper_pos) * 50
                 return np.concatenate([drawer_action, [grip_action]])
 
         # check if the gripper is near the handler
@@ -340,7 +340,7 @@ class SawyerDrawerLongEnvV3(SawyerVisualEnv):
             # open the gripper
             grip_action = 0
             # move the gripper to the handler
-            drawer_action = (handle_pos - gripper_pos) * 20
+            drawer_action = (handle_pos - gripper_pos) * 30
             return np.concatenate([drawer_action, [grip_action]])
         else:
             # print(-6)
