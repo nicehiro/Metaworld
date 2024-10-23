@@ -12,11 +12,13 @@ from metaworld.envs.mujoco.sawyer_xyz.sawyer_visual_env import SawyerVisualEnv
 
 
 class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
-    def __init__(self, tasks=None, render_mode=None):
+    def __init__(self, tasks=None, render_mode=None, goal_level_prob=[0, 0, 1]):
         hand_low = (-0.5, 0.40, 0.05)
         hand_high = (0.5, 1, 0.5)
         drawer_low = np.array((-0.1, 0.9, 0.0))
         drawer_high = np.array((0.1, 0.9, 0.0))
+
+        self.goal_level_prob = goal_level_prob
 
         super().__init__(
             self.model_name,
@@ -99,24 +101,48 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
                 self._random_reset_drawer_space.high,
                 size=self._random_reset_drawer_space.low.size,
             ).astype(np.float64)
-            # set _random_reset_block_space here
-            # since the block position is dependent on the drawer position
-            self._random_reset_block_space = Box(
-                low=drawer_rand_vec + np.array([-0.05, -0.25, 0.05]),
-                high=drawer_rand_vec + np.array([0.05, -0.2, 0.05]),
-            )
-            block_rand_vec = np.random.uniform(
-                self._random_reset_block_space.low,
-                self._random_reset_block_space.high,
-                size=self._random_reset_block_space.low.size,
-            ).astype(np.float64)
-            # self._last_rand_vec = None
-            return (drawer_rand_vec, block_rand_vec)
-
+            if self.level == 0 or self.level == 2:
+                # block in front of drawer
+                # set _random_reset_block_space here
+                # since the block position is dependent on the drawer position
+                self._random_reset_block_space = Box(
+                    low=drawer_rand_vec + np.array([-0.05, -0.25, 0.05]),
+                    high=drawer_rand_vec + np.array([0.05, -0.2, 0.05]),
+                )
+                block_rand_vec = np.random.uniform(
+                    self._random_reset_block_space.low,
+                    self._random_reset_block_space.high,
+                    size=self._random_reset_block_space.low.size,
+                ).astype(np.float64)
+                # self._last_rand_vec = None
+                return (drawer_rand_vec, block_rand_vec)
+            elif self.level == 1:
+                # block won't be in front of drawer
+                # choose left or right of drawer randomly
+                if np.random.rand() < 0.5:
+                    self._random_reset_block_space = Box(
+                        low=drawer_rand_vec + np.array([0.15, -0.25, 0.05]),
+                        high=drawer_rand_vec + np.array([0.25, -0.2, 0.05]),
+                    )
+                else:
+                    self._random_reset_block_space = Box(
+                        low=drawer_rand_vec + np.array([-0.25, -0.25, 0.05]),
+                        high=drawer_rand_vec + np.array([-0.15, -0.2, 0.05]),
+                    )
+                block_rand_vec = np.random.uniform(
+                    self._random_reset_block_space.low,
+                    self._random_reset_block_space.high,
+                    size=self._random_reset_block_space.low.size,
+                ).astype(np.float64)
+                return (drawer_rand_vec, block_rand_vec)
+            
     def reset_model(self):
         self._freeze_rand_vec = False
         self._reset_hand()
         self.prev_obs = self._get_curr_obs_combined_no_goal()
+
+        # sample a level for the task
+        self.level = np.random.choice([0, 1, 2], p=self.goal_level_prob)
 
         self.obj_init_pos, self.block_init_pos = self._get_state_rand_vec()
 
@@ -140,19 +166,25 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
         # update
         mujoco.mj_forward(self.model, self.data)
 
-        # Set _target_pos to current drawer position (closed) minus an offset
-        drawer_target_pos = self.obj_init_pos + np.array(
-            [0.0, -0.16 - self.maxDist, 0.0]
-        )
-        # set block target away from drawer
-        if self.block_init_pos[0] < self.obj_init_pos[0]:
-            block_target_pos = np.array(
-                [self.obj_init_pos[0] - 0.2, self.block_init_pos[1], self.block_init_pos[2]]
+        if self.level == 1 or self.level == 2:
+            # Set _target_pos to current drawer position (closed) minus an offset
+            drawer_target_pos = self.obj_init_pos + np.array(
+                [0.0, -0.16 - self.maxDist, 0.09]
             )
         else:
-            block_target_pos = np.array(
-                [self.obj_init_pos[0] + 0.2, self.block_init_pos[1], self.block_init_pos[2]]
-            )
+            drawer_target_pos = self.obj_init_pos + np.array([0.0, -0.16, 0.09])
+        if self.level == 0 or self.level == 2:
+            # set block target away from drawer
+            if self.block_init_pos[0] < self.obj_init_pos[0]:
+                block_target_pos = np.array(
+                    [self.obj_init_pos[0] - 0.2, self.block_init_pos[1], self.block_init_pos[2]]
+                )
+            else:
+                block_target_pos = np.array(
+                    [self.obj_init_pos[0] + 0.2, self.block_init_pos[1], self.block_init_pos[2]]
+                )
+        else:
+            block_target_pos = self.block_init_pos
         self._target_pos = np.concatenate([drawer_target_pos, block_target_pos])
 
         # Set mujoco body to computed position
@@ -208,7 +240,7 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
         if np.linalg.norm(drawer_handle_pos - drawer_handle_target_pos) < 0.02:
             # print(7)
             # already opened
-            return np.array([0, 0, 0, 0])
+            return np.array([0, 0, 0, 0]), None
 
         # check if the gripper is near the handler
         if np.linalg.norm(gripper_pos - drawer_handle_pos) < 0.02:
@@ -217,7 +249,7 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
             grip_action = 1
             # open the drawer
             drawer_action = (drawer_handle_target_pos - drawer_handle_pos) * 5
-            return np.concatenate([drawer_action, [grip_action]])
+            return np.concatenate([drawer_action, [grip_action]]), None
 
         # check if the gripper is on the top of the handler
         handler_pos_xy = drawer_handle_pos[:2]
@@ -228,7 +260,7 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
             grip_action = 0
             # move the gripper to the handler
             drawer_action = (drawer_handle_pos - gripper_pos) * 20
-            return np.concatenate([drawer_action, [grip_action]])
+            return np.concatenate([drawer_action, [grip_action]]), None
 
         # check if the block is moved
         handler_top_pos = drawer_handle_pos + np.array([0, 0, 0.1])
@@ -238,7 +270,7 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
             # move to the top of drawer handle
             grip_action = 0
             drawer_action = (handler_top_pos - gripper_pos) * 5
-            return np.concatenate([drawer_action, [grip_action]])
+            return np.concatenate([drawer_action, [grip_action]]), None
 
         # check if the gripper is near the block
         # block_left_pos = block_pos + np.array([-0.06, 0, 0])
@@ -248,7 +280,7 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
             grip_action = 1
             # move the block
             block_action = (block_target_pos - block_pos) * 10
-            return np.concatenate([block_action, [grip_action]])
+            return np.concatenate([block_action, [grip_action]]), None
 
         # check if the gripper is on the top of the block
         # block_left_top_pos = block_left_pos + np.array([0, 0, 0.1])
@@ -258,15 +290,15 @@ class SawyerDrawerOpenLongEnvV3(SawyerVisualEnv):
             grip_action = 1
             # move the gripper to the block
             block_action = (block_hold_pos - gripper_pos) * 5
-            return np.concatenate([block_action, [grip_action]])
+            return np.concatenate([block_action, [grip_action]]), None
         else:
             # move the gripper to the top of block
             # print(1)
             grip_action = 1
             block_action = (block_hold_top_pos - gripper_pos) * 5
-            return np.concatenate([block_action, [grip_action]])
+            return np.concatenate([block_action, [grip_action]]), None
 
-        return np.array([0, 0, 0, 0])
+        return np.array([0, 0, 0, 0]), None
 
 
 class TrainDrawerOpenLongv3(SawyerDrawerOpenLongEnvV3):

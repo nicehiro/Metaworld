@@ -423,7 +423,7 @@ def create_observable_goal_envs(envs=ALL_V2_ENVIRONMENTS):
     for env_name, env_cls in envs.items():
         d = {}
 
-        def initialize(env, seed=None, render_mode=None):
+        def initialize(env, seed=None, render_mode=None, goal_level_prob=None):
             if seed is not None:
                 st0 = np.random.get_state()
                 np.random.seed(seed)
@@ -433,6 +433,7 @@ def create_observable_goal_envs(envs=ALL_V2_ENVIRONMENTS):
             env._freeze_rand_vec = False
             env._set_task_called = True
             env.render_mode = render_mode
+            env.goal_level_prob = goal_level_prob
             env.reset()
             env._freeze_rand_vec = True
             if seed is not None:
